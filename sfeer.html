@@ -38,13 +38,72 @@
 
 <script>
 const profiles = [
-  { name: 'Peter van Diepen (SPAIN)', img: 'images/Peter spanje.jpg' },
-
-  { name: 'Joris van Meerten (NL)', img: 'images/joris koptelefoon3.jpg' },
-  { name: 'Ava de Groot (NL)' , img: 'https://i.pravatar.cc/80?img=1' },
-  { name: 'Jasper en Jamila (BEL)', img: 'images/jasper en jamila.jpg'},
-  { name: 'Noor Janssen (FRA)', img: 'https://i.pravatar.cc/80?img=3' },
-  { name: 'Henny van Dijk (NL)', img: 'images/Henny van Dijk.jpg' }
+  { 
+    name: 'Peter van Diepen (SPAIN)', 
+    img: 'images/Peter spanje.jpg',
+    personality: {
+      activityLevel: 0.4,
+      sessionLength: 0.6,
+      weekendBoost: 0.3,
+      nightOwl: true,
+      earlyBird: false
+    }
+  },
+  { 
+    name: 'Joris van Meerten (NL)', 
+    img: 'images/joris koptelefoon3.jpg',
+    personality: {
+      activityLevel: 0.7,
+      sessionLength: 0.8,
+      weekendBoost: 0.2,
+      nightOwl: false,
+      earlyBird: true
+    }
+  },
+  { 
+    name: 'Ava de Groot (NL)',
+    img: 'https://i.pravatar.cc/80?img=1',
+    personality: {
+      activityLevel: 0.5,
+      sessionLength: 0.4,
+      weekendBoost: 0.1,
+      nightOwl: false,
+      earlyBird: false
+    }
+  },
+  { 
+    name: 'Jasper en Jamila (BEL)',
+    img: 'images/jasper en jamila.jpg',
+    personality: {
+      activityLevel: 0.3,
+      sessionLength: 0.7,
+      weekendBoost: 0.4,
+      nightOwl: true,
+      earlyBird: false
+    }
+  },
+  { 
+    name: 'Noor Janssen (FRA)',
+    img: 'https://i.pravatar.cc/80?img=3',
+    personality: {
+      activityLevel: 0.6,
+      sessionLength: 0.5,
+      weekendBoost: 0.2,
+      nightOwl: false,
+      earlyBird: true
+    }
+  },
+  { 
+    name: 'Henny van Dijk (NL)',
+    img: 'images/Henny van Dijk.jpg',
+    personality: {
+      activityLevel: 0.2,
+      sessionLength: 0.3,
+      weekendBoost: 0.1,
+      nightOwl: false,
+      earlyBird: true
+    }
+  }
 ];
 
 const container = document.getElementById('users');
@@ -61,36 +120,81 @@ function renderUsers() {
   });
 }
 
+function getUserLoginChance(user) {
+  const p = user.personality;
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay();
+
+  let chance = p.activityLevel;
+
+  // Weekend boost
+  if (day === 5 || day === 6 || day === 0) {
+    chance += p.weekendBoost;
+  }
+
+  // Night owl
+  if (p.nightOwl && hour >= 20) {
+    chance += 0.2;
+  }
+
+  // Early bird
+  if (p.earlyBird && hour < 9) {
+    chance += 0.2;
+  }
+
+  return Math.min(chance, 0.95);
+}
+
 function randomLogin() {
   const offline = profiles.filter(p => !online.includes(p));
-  if (offline.length) {
-    const pick = offline[Math.floor(Math.random()*offline.length)];
-    online.push(pick);
+  if (!offline.length) return;
+
+  // Pick someone weighted by personality
+  const weighted = offline.filter(p => Math.random() < getUserLoginChance(p));
+  const pick = weighted.length 
+    ? weighted[Math.floor(Math.random() * weighted.length)]
+    : offline[Math.floor(Math.random() * offline.length)];
+
+  online.push(pick);
+  renderUsers();
+}
+
+function randomLogout() {
+  if (!online.length) return;
+
+  // Weighted by session length (shorter sessions = more likely to logout)
+  const weighted = online.filter(p => Math.random() > p.personality.sessionLength);
+  const index = weighted.length
+    ? online.indexOf(weighted[Math.floor(Math.random() * weighted.length)])
+    : Math.floor(Math.random() * online.length);
+
+  const card = container.children[index];
+  card.style.animation = 'fadeOut 0.4s forwards';
+
+  setTimeout(() => {
+    online.splice(index, 1);
+    renderUsers();
+  }, 400);
+}
+
+function simulateActivity() {
+  // Randomly decide login or logout
+  Math.random() > 0.5 ? randomLogin() : randomLogout();
+
+  // Rare chance of empty room
+  if (Math.random() < 0.03) {
+    online = [];
     renderUsers();
   }
 }
 
-function randomLogout() {
-  if (online.length) {
-    const index = Math.floor(Math.random()*online.length);
-    const card = container.children[index];
-    // animate out, then remove
-    card.style.animation = 'fadeOut 0.4s forwards';
-    setTimeout(() => {
-      online.splice(index, 1);
-      renderUsers();
-    }, 400);
-  }
-}
+setInterval(simulateActivity, 12500);
 
-// Simulate logins/logouts
-setInterval(() => {
-  Math.random() > 0.5 ? randomLogin() : randomLogout();
-}, 12500);
+// Random initial online count
+const initialCount = Math.floor(Math.random() * 3);
+for (let i = 0; i < initialCount; i++) randomLogin();
 
-// Start with a couple online
-randomLogin();
-randomLogin();
 </script>
 
 </body>
